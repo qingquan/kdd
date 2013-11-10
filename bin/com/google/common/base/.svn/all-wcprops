@@ -1,0 +1,101 @@
+K 25
+svn:wc:ra_dav:version-url
+V 50
+/svn/!svn/ver/117/trunk/src/com/google/common/base
+END
+FinalizableSoftReference.java
+K 25
+svn:wc:ra_dav:version-url
+V 79
+/svn/!svn/ver/98/trunk/src/com/google/common/base/FinalizableSoftReference.java
+END
+FinalizableReference.java
+K 25
+svn:wc:ra_dav:version-url
+V 75
+/svn/!svn/ver/98/trunk/src/com/google/common/base/FinalizableReference.java
+END
+Predicate.java
+K 25
+svn:wc:ra_dav:version-url
+V 64
+/svn/!svn/ver/98/trunk/src/com/google/common/base/Predicate.java
+END
+Supplier.java
+K 25
+svn:wc:ra_dav:version-url
+V 63
+/svn/!svn/ver/76/trunk/src/com/google/common/base/Supplier.java
+END
+FinalizableReferenceQueue.java
+K 25
+svn:wc:ra_dav:version-url
+V 80
+/svn/!svn/ver/98/trunk/src/com/google/common/base/FinalizableReferenceQueue.java
+END
+FinalizableWeakReference.java
+K 25
+svn:wc:ra_dav:version-url
+V 79
+/svn/!svn/ver/98/trunk/src/com/google/common/base/FinalizableWeakReference.java
+END
+Functions.java
+K 25
+svn:wc:ra_dav:version-url
+V 65
+/svn/!svn/ver/117/trunk/src/com/google/common/base/Functions.java
+END
+Preconditions.java
+K 25
+svn:wc:ra_dav:version-url
+V 69
+/svn/!svn/ver/117/trunk/src/com/google/common/base/Preconditions.java
+END
+Predicates.java
+K 25
+svn:wc:ra_dav:version-url
+V 65
+/svn/!svn/ver/98/trunk/src/com/google/common/base/Predicates.java
+END
+package-info.java
+K 25
+svn:wc:ra_dav:version-url
+V 67
+/svn/!svn/ver/71/trunk/src/com/google/common/base/package-info.java
+END
+Platform.java
+K 25
+svn:wc:ra_dav:version-url
+V 63
+/svn/!svn/ver/77/trunk/src/com/google/common/base/Platform.java
+END
+Function.java
+K 25
+svn:wc:ra_dav:version-url
+V 63
+/svn/!svn/ver/78/trunk/src/com/google/common/base/Function.java
+END
+Suppliers.java
+K 25
+svn:wc:ra_dav:version-url
+V 64
+/svn/!svn/ver/98/trunk/src/com/google/common/base/Suppliers.java
+END
+Joiner.java
+K 25
+svn:wc:ra_dav:version-url
+V 61
+/svn/!svn/ver/98/trunk/src/com/google/common/base/Joiner.java
+END
+FinalizablePhantomReference.java
+K 25
+svn:wc:ra_dav:version-url
+V 82
+/svn/!svn/ver/76/trunk/src/com/google/common/base/FinalizablePhantomReference.java
+END
+Objects.java
+K 25
+svn:wc:ra_dav:version-url
+V 62
+/svn/!svn/ver/80/trunk/src/com/google/common/base/Objects.java
+END
