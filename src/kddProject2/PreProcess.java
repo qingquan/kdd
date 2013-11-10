@@ -11,9 +11,18 @@ import java.io.*;
 import com.google.common.collect.Sets;
 
 public class PreProcess {
-	private int limitNum = 80;
-	private ArrayList<String> userList = new ArrayList<String>();
-	private Map<String, ArrayList> dictMap = new HashMap<String, ArrayList>();
+	private int limitNum = 100;
+	private ArrayList<String> userList = new ArrayList<String>();//get users 
+	private Map<String, ArrayList> dictMap = new HashMap<String, ArrayList>();//{user, repos}
+    Map<String, Map> relationMap = new HashMap<String, Map>();//{user, {user, relationweight}}
+
+	public ArrayList<String> getUserList(){
+		return userList;
+	}
+	
+	public Map<String, ArrayList> getUserRepoMap(){
+		return dictMap;
+	}
 //	public void printContributor(Connection con) throws SQLException{
 //		Statement stmt = null;
 //		String query = "SELECT * FROM contributors LIMIT 10";
@@ -39,7 +48,7 @@ public class PreProcess {
 //			WHERE contributor_login="klaussilveira";
 	
 	
-	public Map<String, ArrayList> getUserRepoDict(Connection con) throws SQLException{
+	public void getUserRepoDict(Connection con) throws SQLException{
 		Statement stmt = null;
 		String queryUser = "SELECT DISTINCT contributor_login FROM " + 
 							    "(SELECT repo_name, contributor_login "+
@@ -65,7 +74,15 @@ public class PreProcess {
 				        "FROM contributors LIMIT " + limitNum + " ) t " + 
 				    "WHERE contributor_login= '" + s + "'";
 			ResultSet rsRepo= stmt.executeQuery(query);
-			while(rsRepo.next()){
+			while(rsRepo.next()){//	    Iterator //	    Iterator it = relationMap.entrySet().iterator();
+//			    while (it.hasNext()) {
+//		        Map.Entry pairs = (Map.Entry)it.next();
+//		        System.out.println(pairs.getKey() + " = " + pairs.getValue());
+//		    }it = relationMap.entrySet().iterator();
+//			    while (it.hasNext()) {
+//		        Map.Entry pairs = (Map.Entry)it.next();
+//		        System.out.println(pairs.getKey() + " = " + pairs.getValue());
+//		    }
 				String repoName = rsRepo.getString(1);
 				repoList.add(repoName);
 //				System.out.println("user name "+s+" repo "+repoName);
@@ -78,16 +95,12 @@ public class PreProcess {
 //	        Map.Entry pairs = (Map.Entry)it.next();
 //	        System.out.println(pairs.getKey() + " = " + pairs.getValue());
 //	    }
-	    return dictMap;
+//	    return dictMap;
 	}
 
-	public void getRelationWeight(ArrayList<String> users, Map<String, ArrayList> dictMap){
-//	    Iterator it = dictMap.entrySet().iterator();
-//	    while (it.hasNext()) {
-//	        Map.Entry pairs = (Map.Entry)it.next();
-//	        System.out.println(pairs.getKey() + " = " + pairs.getValue());
-//	    }
-	    Map<String, Map> relationMap = new HashMap<String, Map>();
+	public Map<String, Map> getRelationWeight(ArrayList<String> users, Map<String, ArrayList> dictMap){
+
+//	    Map<String, Map> relationMap = new HashMap<String, Map>();
 	    for(String s: users){
 	    	ArrayList repoList1 = dictMap.get(s);
 	    	Set<String> repoSet1 = new HashSet<String>(repoList1);
@@ -101,9 +114,11 @@ public class PreProcess {
 	    			int numRepo2 = repoList2.size();
 	    			
 	    			Set<String> repoSet2 = new HashSet<String>(repoList2);
-	    			int numIntersect = Sets.intersection(repoSet1, repoSet2).size();
-	    			
-	    			float weight = numIntersect/(numRepo1+numRepo2);
+	    			Set<String> intersect = Sets.intersection(repoSet1, repoSet2);
+	    			int numIntersect = intersect.size();
+//	    			System.out.println("user 1 and user 2"+s+" "+os);
+//	    			System.out.println("the intersect"+numIntersect);
+	    			float weight = (float)numIntersect/(float)(numRepo1+numRepo2);
 	    			relation.put(os, weight);
 	    		}
 	    	}
@@ -111,6 +126,92 @@ public class PreProcess {
 	    	relationMap.put(s, relation);
 	    }
 		
+//	    Iterator it = relationMap.entrySet().iterator();
+//	    while (it.hasNext()) {
+//	        Map.Entry pairs = (Map.Entry)it.next();
+//	        System.out.println(pairs.getKey() + " = " + pairs.getValue());
+//	    }
+	    return relationMap;
+	}
+	
+	public void writeReposFile(Map<String, ArrayList> dictMap){
+		try {
+			File file = new File("/home/jibo/workspace/kddProject2/files/userRepos.txt");
+			// if file doesnt exists, then create it
+			if (!file.exists()) {
+				file.createNewFile();
+			}
+			FileWriter fw = new FileWriter(file.getAbsoluteFile());
+			BufferedWriter bw = new BufferedWriter(fw);
+			
+		    Iterator it = dictMap.entrySet().iterator();
+		    while (it.hasNext()) {
+				String repoString = "";
+
+		        Map.Entry pairs = (Map.Entry)it.next();
+		        
+		        String userName = (String)pairs.getKey();
+		        repoString += userName; //add userName to string
+		        
+		        List<String> repoList = (ArrayList<String>)pairs.getValue();
+		        String numRepo = String.valueOf(repoList.size());
+		        repoString += " " + numRepo;
+			    repoString += "\n\n";
+				bw.write(repoString);
+		        System.out.println(pairs.getKey() + " = " + pairs.getValue());
+		    }
+
+		    bw.close();
+		    fw.close();
+			System.out.println("Done");
+		} catch (Exception e)
+		{
+		    e.printStackTrace();
+		    System.out.println("No such file exists.");
+		}
+	}
+	
+	public void writeRelationFile(Map<String, Map> relationMap){
+		try {
+			File file = new File("/home/jibo/workspace/kddProject2/files/relationWeight.txt");
+			// if file doesnt exists, then create it
+			if (!file.exists()) {
+				file.createNewFile();
+			}
+//		    PrintWriter pr = new PrintWriter(file);
+			FileWriter fw = new FileWriter(file.getAbsoluteFile());
+			BufferedWriter bw = new BufferedWriter(fw);
+			
+		    Iterator it = relationMap.entrySet().iterator();
+		    while (it.hasNext()) {
+				String relationString = "";
+
+		        Map.Entry pairs = (Map.Entry)it.next();
+		        
+		        String userName = (String)pairs.getKey();
+		        relationString += userName; //add userName to string
+		        
+		        Map<String, Float> mapOthers = (Map<String, Float>)pairs.getValue();
+			    Iterator itOthers = mapOthers.entrySet().iterator();
+			    while (itOthers.hasNext()) {
+			        Map.Entry pairsOthers = (Map.Entry)itOthers.next();
+			        relationString += " " + (String)pairsOthers.getKey(); //add other users and weight to str
+			        relationString += " " + pairsOthers.getValue().toString();
+//			        System.out.println(pairsOthers.getKey() + " = " + pairsOthers.getValue());
+			    }
+			    relationString += "\n\n";
+				bw.write(relationString);
+//		        System.out.println(pairs.getKey() + " = " + pairs.getValue());
+		    }
+
+		    bw.close();
+		    fw.close();
+			System.out.println("Done");
+		} catch (Exception e)
+		{
+		    e.printStackTrace();
+		    System.out.println("No such file exists.");
+		}
 	}
 //	public void printCityByCountry(String country) throws SQLException{
 //		Statement stmt = null;
@@ -148,9 +249,19 @@ public class PreProcess {
 			System.out.println("successfully connect to db");
 		
 		PreProcess myPreProcess = new PreProcess();
+		
 		try{
 			myPreProcess.getUserRepoDict(dbCon);
 		}catch(SQLException ex){System.out.println(ex.getMessage());}
+		
+		ArrayList<String> users = myPreProcess.getUserList();
+		Map<String, ArrayList> dictMap = myPreProcess.getUserRepoMap();
+		myPreProcess.getRelationWeight(users, dictMap);
+
+		Map<String, Map> relationMap = myPreProcess.getRelationWeight(users, dictMap);
+		myPreProcess.writeRelationFile(relationMap);//write relation map to file
+//		myPreProcess.writeReposFile(dictMap);//write repos map to file
+		
 //		System.out.println("Connection : " +con.doConnection());
 //		try{
 //			con.printCounr yByCapital("Paris");
