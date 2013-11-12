@@ -13,40 +13,36 @@ import com.google.common.collect.Sets;
 public class PreProcess {
 	private int limitNum = 100;
 	private ArrayList<String> userList = new ArrayList<String>();//get users 
+	private ArrayList<String> repoList = new ArrayList<String>();//get repos 
 	private Map<String, ArrayList> dictMap = new HashMap<String, ArrayList>();//{user, repos}
+	private Map<String, ArrayList> itemMap = new HashMap<String, ArrayList>();//{user, items}
+	private Map<String, ArrayList> friendMap = new HashMap<String, ArrayList>();//{user, users in 1- hop}
+	private Map<String, ArrayList> task_item_Map = new HashMap<String, ArrayList>();//{repo, items}
     Map<String, Map> relationMap = new HashMap<String, Map>();//{user, {user, relationweight}}
 
 	public ArrayList<String> getUserList(){
 		return userList;
 	}
 	
+	public ArrayList<String> getRepoList(){
+		return repoList;
+	}
+	
 	public Map<String, ArrayList> getUserRepoMap(){
 		return dictMap;
 	}
-//	public void printContributor(Connection con) throws SQLException{
-//		Statement stmt = null;
-//		String query = "SELECT * FROM contributors LIMIT 10";
-//		stmt = con.createStatement();
-//		ResultSet rs = stmt.executeQuery(query);
-//		
-//		while (rs.next()) {
-//			String loginName = rs.getString(1); // or rs.getString("NAME");
-//			String repoName= rs.getString(2);
-//			String contributorName = rs.getString(3);
-//			int score = rs.getInt(4);
-//			System.out.println(" login name : "+loginName);
-//			System.out.println(" repo name : "+repoName);
-//			System.out.println(" contributor : "+contributorName);
-//			System.out.println(" score : "+score);
-//		}
-//	}
 	
-//	String query = 
-//			SELECT * FROM
-//			    (SELECT repo_name, contributor_login 
-//			     FROM contributors LIMIT 80) t 
-//			WHERE contributor_login="klaussilveira";
+	public Map<String, ArrayList> getUserItemMap(){
+		return itemMap;
+	}
 	
+	public Map<String, ArrayList> getUserFriendMap(){
+		return friendMap;
+	}
+	
+	public Map<String, ArrayList> getTaskItemMap(){
+		return task_item_Map;
+	}
 	
 	public void getUserRepoDict(Connection con) throws SQLException{
 		Statement stmt = null;
@@ -57,15 +53,14 @@ public class PreProcess {
 		stmt = con.createStatement();
 		ResultSet rs = stmt.executeQuery(queryUser);
 		
-		//construct user list
-//		ArrayList<String> users = new ArrayList<String>();
+		//-----------------------construct user list---------------------------------
 		while (rs.next()) {
 			String userName = rs.getString(1); // or rs.getString("NAME");
 			userList.add(userName);
 //			System.out.println(" user name : "+userName);
 		}
-		//construct dict <user, <repo1,repo2>>
-//		Map<String, ArrayList> dictMap = new HashMap<String, ArrayList>();
+		
+		//----------------construct dict <user, <repo1,repo2...>>----------------------------
 		for(String s: userList){
 			ArrayList<String> repoList = new ArrayList<String>();
 			String query = 
@@ -74,28 +69,59 @@ public class PreProcess {
 				        "FROM contributors LIMIT " + limitNum + " ) t " + 
 				    "WHERE contributor_login= '" + s + "'";
 			ResultSet rsRepo= stmt.executeQuery(query);
-			while(rsRepo.next()){//	    Iterator //	    Iterator it = relationMap.entrySet().iterator();
-//			    while (it.hasNext()) {
-//		        Map.Entry pairs = (Map.Entry)it.next();
-//		        System.out.println(pairs.getKey() + " = " + pairs.getValue());
-//		    }it = relationMap.entrySet().iterator();
-//			    while (it.hasNext()) {
-//		        Map.Entry pairs = (Map.Entry)it.next();
-//		        System.out.println(pairs.getKey() + " = " + pairs.getValue());
-//		    }
+			while(rsRepo.next()){
 				String repoName = rsRepo.getString(1);
 				repoList.add(repoName);
-//				System.out.println("user name "+s+" repo "+repoName);
-			}
+			}			
 			dictMap.put(s, repoList);
+			
 		}
-		//check the dict is correct
-//	    Iterator it = dictMap.entrySet().iterator();
-//	    while (it.hasNext()) {
-//	        Map.Entry pairs = (Map.Entry)it.next();
-//	        System.out.println(pairs.getKey() + " = " + pairs.getValue());
-//	    }
-//	    return dictMap;
+		//------------------items---------------------
+		for(String s2: userList){
+			ArrayList<String> langList = new ArrayList<String>();
+			String queryLang = 
+				"SELECT DISTINCT language " + 
+		        "FROM languages " + 
+		    "WHERE login_name= '" + s2 + "' "+
+		    "LIMIT "+ limitNum;
+			ResultSet rsLang= stmt.executeQuery(queryLang);
+			while(rsLang.next()){
+				String langName = rsLang.getString(1);
+				langList.add(langName);
+			}	
+			itemMap.put(s2, langList);
+		}	
+	}
+	
+	public void getTaskItemMapping(Connection con) throws SQLException{
+		Statement stmt = null;
+		String queryRepo = "SELECT DISTINCT repo_name FROM " + 
+	    					"(SELECT repo_name, contributor_login "+
+	    					"FROM contributors LIMIT " + limitNum + " ) t ";
+		
+		stmt = con.createStatement();
+		ResultSet rs = stmt.executeQuery(queryRepo);
+		//-----------------------construct repo list---------------------------------
+		while (rs.next()) {
+			String repoName = rs.getString(1); // or rs.getString("NAME");
+			repoList.add(repoName);
+		}
+		//------------------items---------------------
+		for(String s2: repoList){
+			ArrayList<String> langList = new ArrayList<String>();
+			String queryLang = 
+				"SELECT DISTINCT language " + 
+		        "FROM languages " + 
+		    "WHERE repo_name= '" + s2 + "' "+
+		    "LIMIT "+ limitNum;
+			ResultSet rsLang= stmt.executeQuery(queryLang);
+			while(rsLang.next()){
+				String langName = rsLang.getString(1);
+				langList.add(langName);
+			}	
+			task_item_Map.put(s2, langList);
+		}	
+		
 	}
 
 	public Map<String, Map> getRelationWeight(ArrayList<String> users, Map<String, ArrayList> dictMap){
@@ -107,6 +133,7 @@ public class PreProcess {
 	    	int numRepo1 = repoList1.size();
 	    	
 			Map<String, Float> relation = new HashMap<String, Float>();
+			ArrayList<String> friends = new ArrayList();
 
 	    	for(String os: users){
 	    		if(!os.equals(s)){
@@ -116,27 +143,22 @@ public class PreProcess {
 	    			Set<String> repoSet2 = new HashSet<String>(repoList2);
 	    			Set<String> intersect = Sets.intersection(repoSet1, repoSet2);
 	    			int numIntersect = intersect.size();
-//	    			System.out.println("user 1 and user 2"+s+" "+os);
-//	    			System.out.println("the intersect"+numIntersect);
 	    			float weight = (float)numIntersect/(float)(numRepo1+numRepo2);
+	    			if(weight>0.00){
+	    				friends.add(os);
+	    			}
 	    			relation.put(os, weight);
 	    		}
 	    	}
-	    	
+	    	friendMap.put(s, friends);
 	    	relationMap.put(s, relation);
 	    }
-		
-//	    Iterator it = relationMap.entrySet().iterator();
-//	    while (it.hasNext()) {
-//	        Map.Entry pairs = (Map.Entry)it.next();
-//	        System.out.println(pairs.getKey() + " = " + pairs.getValue());
-//	    }
 	    return relationMap;
 	}
 	
 	public void writeReposFile(Map<String, ArrayList> dictMap){
 		try {
-			File file = new File("/home/jibo/workspace/kddProject2/files/userRepos.txt");
+			File file = new File("files/userRepos.txt");
 			// if file doesnt exists, then create it
 			if (!file.exists()) {
 				file.createNewFile();
@@ -173,7 +195,7 @@ public class PreProcess {
 	
 	public void writeRelationFile(Map<String, Map> relationMap){
 		try {
-			File file = new File("/home/jibo/workspace/kddProject2/files/relationWeight.txt");
+			File file = new File("files/relationWeight.txt");
 			// if file doesnt exists, then create it
 			if (!file.exists()) {
 				file.createNewFile();
@@ -213,34 +235,6 @@ public class PreProcess {
 		    System.out.println("No such file exists.");
 		}
 	}
-//	public void printCityByCountry(String country) throws SQLException{
-//		Statement stmt = null;
-//		String query = " SELECT * FROM CITY WHERE country='"+country+"'";
-//		stmt = connection.createStatement();
-//		ResultSet rs = stmt.executeQuery(query);
-//		while (rs.next()) {
-//			String name = rs.getString(1); // or rs.getString("NAME");
-//			String coun= rs.getString(2);
-//			String province = rs.getString(3);
-//			int population = rs.getInt(4);
-//			System.out.println(" Name : "+name);
-//			System.out.println(" Country : "+coun);
-//			System.out.println(" Province : "+province);
-//			System.out.println(" Population : "+population);
-//		}
-//		stmt.close();
-//	}
-//
-//	public void updateCityPopulation(String cityName,String province, String population)throws SQLException
-//	{
-//		Statement stmt = null;
-//		stmt = connection.createStatement();
-//		String sql = "UPDATE CITY SET population='"+ population
-//		+"' WHERE NAME='"+cityName +"' AND
-//		PROVINCE='"+ province +"'";
-//		stmt.executeUpdate(sql);
-//		stmt.close();
-//	}
 	
 	public static void main(String arg[]){
 		TestCon con =new TestCon();
@@ -253,21 +247,27 @@ public class PreProcess {
 		try{
 			myPreProcess.getUserRepoDict(dbCon);
 		}catch(SQLException ex){System.out.println(ex.getMessage());}
+		try{
+			myPreProcess.getTaskItemMapping(dbCon);
+		}catch(SQLException ex){System.out.println(ex.getMessage());}
 		
 		ArrayList<String> users = myPreProcess.getUserList();
+		ArrayList<String> repos = myPreProcess.getRepoList();
 		Map<String, ArrayList> dictMap = myPreProcess.getUserRepoMap();
+		Map<String, ArrayList> itemMap = myPreProcess.getUserItemMap();
+		
+		Map<String, ArrayList> task_item_Map = myPreProcess.getTaskItemMap();
+		
 		myPreProcess.getRelationWeight(users, dictMap);
 
 		Map<String, Map> relationMap = myPreProcess.getRelationWeight(users, dictMap);
 		myPreProcess.writeRelationFile(relationMap);//write relation map to file
 //		myPreProcess.writeReposFile(dictMap);//write repos map to file
+		Map<String, ArrayList> friendMap = myPreProcess.getUserFriendMap();
+		System.out.print(friendMap);
+		System.out.print(friendMap.get("crodjer").size());
 		
-//		System.out.println("Connection : " +con.doConnection());
-//		try{
-//			con.printCounr yByCapital("Paris");
-//			con.printCityByCountry("D");
-//			con.updateCityPopulation("Munich","Bayern","3000");
-//		}catch(SQLException ex){System.out.println(ex.getMessage());}
+		
 	}
 
 }
