@@ -71,9 +71,11 @@ public class MinDiamSol{
 
 		
 		String v = "crodjer";
-		Task.add("django-social-auth");
+		//Task.add("django-social-auth");
+		Task.add("git-ftp");
 		//System.out.println(Task.get(0));
-		//System.out.println(task_item_Map);
+		System.out.println(task_item_Map);
+		System.out.println(itemMap);
 		//找到指定的Task需要的所有languages(items)，放进itemsRequired里面
 		for(String t: Task){
 			itemsRequired.addAll(task_item_Map.get(t));//这个Task需要的items
@@ -97,8 +99,8 @@ public class MinDiamSol{
 		groupMem.removeAll(groupMem2);
 		groupMem.addAll(groupMem2);
 		groupMem.remove(v);
-		System.out.println(groupMem);
-		System.out.println(groupMem.size());
+		//System.out.println(groupMem);
+		//System.out.println(groupMem.size());
 		
 		//relation 存放用户v的relationMap（对于v，所有其他用户及其weight）,即{user, {user, relationweight}}后半部分
 		Map<String, Float> relation = new HashMap<String, Float>();
@@ -157,14 +159,15 @@ public class MinDiamSol{
 				}
 			}
 		}
-		System.out.println(EdgeInMid);
+		//System.out.println(EdgeInMid);
 		
 		//按顺序一个个的把user加进来
 		ArrayList<String> finalGroupMem = new ArrayList();
 		finalGroupMem.add(v);
+		String member = v;
+		int maxflow_old = 0;
 		for(int i=0; i<relationSorted.size();i++){
-			
-						
+									
 			//写个txt让Maxflow读一下	
 			
 	        FileWriter writer;
@@ -186,7 +189,7 @@ public class MinDiamSol{
 	            	itemMapMaxflow.put(item_r, count);
 	            	count++;
 	            }
-	            System.out.println(itemMapMaxflow);
+	            
 	            //User 编号，从k+1到n-2
 	            Map<String, Integer> userMapMaxflow = new HashMap<String, Integer>();
 	            count = itemsRequired.size()+1;
@@ -194,7 +197,7 @@ public class MinDiamSol{
 	            	userMapMaxflow.put(user_r, count);
 	            	count++;
 	            }
-	            System.out.println(userMapMaxflow);
+	            //System.out.println(userMapMaxflow);
 	            //source到Task的点们      
 	            String str1 = "";
 	            for(String item_r: itemsRequired){
@@ -204,8 +207,10 @@ public class MinDiamSol{
 	            	str1 += "\r\n";
 	            }
 	            writer.write(str1);
-	            //Users到sink的点们   
+	            //Users到sink的点们 
+	            //System.out.println(finalGroupMem);
 	            String str2 = "";
+	            
 	            for(String user_r: finalGroupMem){
 	            	str2 += userMapMaxflow.get(user_r);
 	            	str2 += " ";
@@ -228,10 +233,10 @@ public class MinDiamSol{
 	            				str3 += userMapMaxflow.get(user_r);
 	            				str3 += " 1";
 	            				str3 += "\r\n";
-	            				break;
+	            				//break;
 	            			}
 	            		}
-	            		break;
+	            		//break;
 	            	}	            		
 	            }
 	            writer.write(str3);	            
@@ -245,10 +250,14 @@ public class MinDiamSol{
 	        System.out.println("maxflow=" + mf.maxFlow);
 	        if(k==mf.maxFlow)
 	        	break;
+	        if(maxflow_old == mf.maxFlow)
+	        	finalGroupMem.remove(member);
+	        else
+	        	maxflow_old = mf.maxFlow;
 	        
 	        //不满足maxflow，加入新的user和它的capability
 	        Map<String, Double> finalGroupMember = new HashMap<String, Double>();
-			String member = relationSorted.get(i).getKey();
+			member = relationSorted.get(i).getKey();
 			Double capability = capacityMap.get(member);
 			finalGroupMember.put(member, capability);
 			//finalGroupMemberList.add(finalGroupMember);
@@ -265,7 +274,8 @@ public class MinDiamSol{
 					}
 				}
 			}
-			
+			maxflow_old = mf.maxFlow;
+			System.out.println(maxflow_old);
 	        
 		}
 		System.out.println(finalGroupMem);
@@ -273,7 +283,7 @@ public class MinDiamSol{
 		/*System.out.println(relationSorted);
 		System.out.println(relationSorted.get(1));
 		System.out.println(relationSorted.get(1).getValue());
-		System.out.println(finalGroupMemberList);
+		/*System.out.println(finalGroupMemberList);
 		System.out.println(finalGroupMemberList.get(1));*/
 
 	}
