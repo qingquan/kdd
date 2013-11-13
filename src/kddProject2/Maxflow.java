@@ -1,343 +1,321 @@
 package kddProject2;
 
+import java.sql.Connection;
+import java.sql.DriverManager;
+import java.sql.ResultSet;
+import java.sql.SQLException;
+import java.sql.Statement;
 import java.util.*;
 import java.io.*;
+import java.math.*;
 
-public class Maxflow {
-  int 		n;	    //number of nodes 
-  public int 	maxFlow;	//maximum flow 
-  int	source,sink;	//source node, sink node
-  Node[]	v;	    //used to store Nodes 
-  Edge[]	e;	    //used to store Edges
-  
 
-  public Maxflow (){
-  }
+import com.google.common.collect.Sets;
 
-  //this function read capacities from a file
-  private void inputCapacity() throws IOException {
-    BufferedReader br = new BufferedReader (
-			   new FileReader ("files/maxflow.txt"));
-    String line = br.readLine();
-    StringTokenizer st = new StringTokenizer (line);
-    //1st token is the # of nodes 6
-    n = Integer.parseInt (st.nextToken());
-    
-    // first vertex is source and last vertex is sink=n-1.
-    source = 0; sink = n-1;
-    
-    //2nd token is the # of edges 12
-    int m = Integer.parseInt (st.nextToken());
-    
-    //create storage for Nodes and Edges
-    v = new Node[n];
-    e = new Edge[m];
-    //System.out.println(n+" nodes and " + m + " edges.");
-    
-    //create Node objects for graph
-    //numbering them as 0, 1, 2, ..., n-1
-    for (int i = 0; i < n; i++)
-        v[i] = new Node(i);   
-    
-    int i = 0;
-    while ((line=br.readLine()) != null){
-      //check input file
-      if (i >= e.length){
-        System.out.println ("# of lines is greater than # of edges in G, exit...");
-        System.exit(1);
-      }
-      
-      Edge edge = new Edge(i);
-      st = new StringTokenizer (line);
-      
-      //first token is the start point
-      String  start = st.nextToken();
-      int sVal = Integer.parseInt (start);
-      edge.start = sVal;
-      
-      //2nd token is the end point
-      String  end = st.nextToken();
-      int eVal = Integer.parseInt (end);
-      edge.end = eVal;
-      
-      //3rd token is the capacity
-      String  capacity = st.nextToken();
-      edge.capacity = Integer.parseInt (capacity);
-      
-      //System.out.println(" edge: "+edge.start+" "+edge.end+" "+edge.capacity);
-      
-      edge.flow = 0;
-      e[i] = edge;
-      //map[sVal][eVal] = i;
-        
-      //now save edge information in nodes start and end
-      v[sVal].fors.add(i);
-      v[eVal].backs.add(i);
-      
-      i++;
-      if (i == m) break; //i=12
-    }
-  }
-  
-  //this function looks for an augmenting path if any.
-  //An augmenting path contains only forward edges with flow below capacity
-  //and/or backward edges with a flow greater than 0
-  private int[] findAugPath(){
-    //used to mark a node as visited if set as 1
-    int[] visited = new int[v.length];
-    
-    //start from source, walk to the sink
-    Queue<Integer> que = new LinkedList<Integer>();
-    
-    //start from source, do Breadth-First-Search for augmenting paths
-    que.add(source);
-    visited[source] = 1;
-    int current = -1;
-    
-    while (!que.isEmpty()){
-      current = que.remove();
-      
-      //check if we reach sink, if yes, Bingo! 
-      if (current == sink)
-	    break;
+public class MinDiamSol{
+	
+	public static void main(String arg[]){
+		//connect to database
+		TestCon con =new TestCon();
+		Connection dbCon = con.doConnection();
+		if(dbCon != null)
+			System.out.println("successfully connect to db");
+		
+		//Preprocess
+		PreProcess myPreProcess = new PreProcess();		
+		try{
+			myPreProcess.getUserRepoDict(dbCon);
+		}catch(SQLException ex){System.out.println(ex.getMessage());}
+		try{
+			myPreProcess.getTaskItemMapping(dbCon);
+		}catch(SQLException ex){System.out.println(ex.getMessage());}
+		
+		ArrayList<String> users = myPreProcess.getUserList();
+		ArrayList<String> repos = myPreProcess.getRepoList();
+		Map<String, ArrayList> dictMap = myPreProcess.getUserRepoMap();
+		Map<String, Map> relationMap = myPreProcess.getRelationWeight(users, dictMap);
+		Map<String, ArrayList> itemMap = myPreProcess.getUserItemMap();
+		Map<String, ArrayList> task_item_Map = myPreProcess.getTaskItemMap();
+		
+		Map<String, ArrayList> friendMap = myPreProcess.getUserFriendMap();
 
-      //get current's edges
-      Vector<Integer> fors = v[current].fors;
-      Vector<Integer> backs = v[current].backs;
+		//{user, capacity}
+		Map<String, Double> capacityMap = new HashMap<String, Double>();
+		for(String u: users){
+			int numOfRepo =((dictMap.get(u)).size());
+			double cap = Math.log(1+numOfRepo);
+			capacityMap.put(u, cap);
+		}
+		
+		
+		ArrayList<String> itemsRequired = new ArrayList();
+		ArrayList<String> Task = new ArrayList();
+		Map<String, Float> group = new HashMap<String, Float>();
+		ArrayList<String> groupMem = new ArrayList();
+		ArrayList<String> groupMem2 = new ArrayList();
+		ArrayList<String> groupMem3 = new ArrayList();
+		int k;
+		int hop = 2;
+		/*for(String v: users){
+			Task = dictMap.get(v);//Task 找v之前參加过的project 
+			for(String t: Task){
+				itemsRequired = task_item_Map.get(t);//这个Task需要的items
+				k = itemsRequired.size();
+				//begin
+				groupMem = friendMap.get(v);
+				for()
+				//end
+			}
+									
+		}*/
 
-      //select a forward edge if it is not saturated
-      for (int i = 0; i < fors.size(); i++){
-        Integer edge_obj = (Integer)fors.elementAt(i);
-        int edge = edge_obj.intValue();
-        
-        //skip those saturated
-        if (e[edge].capacity == e[edge].flow)
-          continue;
-          
-        //at this point, edge.capacity > edge.flow
-	    if (visited[e[edge].end] == 0){//not yet visited
-	      que.add(e[edge].end);
-	      visited[e[edge].end] = 1;
-	      v[e[edge].end].pNode = current;
-	      v[e[edge].end].pEdge = edge;
-	      e[edge].direct = 1;
-	    }
-      }
-    
-      //select a backward edge if its flow > 0
-      for (int i = 0; i < backs.size(); i++){
-        Integer edge_obj = (Integer)backs.elementAt(i);
-        int edge = edge_obj.intValue();
-        
-        //skip this edge if its flow is 0
-        if (e[edge].flow == 0)
-          continue;
-          
-        //at this point, its flow must be >0        
-	    if (visited[e[edge].start] == 0){//not yet visited
-	      que.add(e[edge].start);
-	      e[edge].direct = -1;
-	      visited[e[edge].start] = 1;
-	      v[e[edge].start].pNode = current;
-	      v[e[edge].start].pEdge = edge;
-	    }
-      }
-    }
+		
+		String v = "crodjer";
+		//Task.add("django-social-auth");
+		Task.add("git-ftp");
+		//System.out.println(Task.get(0));
+		System.out.println(task_item_Map);
+		System.out.println(itemMap);
+		//找到指定的Task需要的所有languages(items)，放进itemsRequired里面
+		for(String t: Task){
+			itemsRequired.addAll(task_item_Map.get(t));//这个Task需要的items
+		}
+		k = itemsRequired.size();
+		System.out.println(k);
+		
+		//friend_of_v是用户v的hop-1 uer的名单（这个放在exclude hop=2的用户之前做，因为get可能改变hashmap的值）
+		ArrayList<String> friend_of_v = new ArrayList<String>();
+		friend_of_v = friendMap.get(v);
+		//System.out.print(friendMap.get("crodjer").size());
+		//System.out.println(friend_of_v);
+		
+		//hop = 2 先找出hop=2以內的所有用戶，放进groupMem里面
+		groupMem = friendMap.get(v);
+		for (String gm1: groupMem){
+			ArrayList groupMemTmp = friendMap.get(gm1);
+			groupMem2.removeAll(groupMemTmp);//去掉重复元素
+			groupMem2.addAll(groupMemTmp);
+		}
+		groupMem.removeAll(groupMem2);
+		groupMem.addAll(groupMem2);
+		groupMem.remove(v);
+		//System.out.println(groupMem);
+		//System.out.println(groupMem.size());
+		
+		//relation 存放用户v的relationMap（对于v，所有其他用户及其weight）,即{user, {user, relationweight}}后半部分
+		Map<String, Float> relation = new HashMap<String, Float>();
+		relation = relationMap.get(v);
+		//relation_cost,存放w(u,v),用于Greedy算法选择最优的u
+		Map<String, Float> relation_cost = new HashMap<String, Float>();
+		float weight;
+		for(String u: groupMem){
+			float weight_uv;
+			weight_uv = 100;
+			for(String hop1: friend_of_v){
+				if (u == hop1){					
+					weight_uv = 100*(1-(relation.get(u)));
+				}
+			}
+			relation_cost.put(u, weight_uv);							
+		}		
+		//System.out.println(relation_cost);
+		
+		//sort "relation_cost" by value
+		List<Map.Entry<String, Float>> relationSorted =
+		    new ArrayList<Map.Entry<String, Float>>(relation_cost.entrySet());
+		Collections.sort(relationSorted, new Comparator<Map.Entry<String, Float>>() {   
+		    public int compare(Map.Entry<String, Float> o1, Map.Entry<String, Float> o2) {      
+		    	if ((o2.getValue() - o1.getValue())<0)  
+		            return 1;  
+		          else if((o2.getValue() - o1.getValue())==0)  
+		            return 0;  
+		          else   
+		            return -1;  
+		        //return (o1.getKey()).toString().compareTo(o2.getKey());
+		    }
+		}); 
+		//System.out.println(relationSorted);
 
-    //check if we find an augmenting path, if yes, do more work
-    //if not return null
-    if (current != sink)
-      return null;
-    
-    //store augmenting path found, in the worst case contain all nodes 
-    int[] revPath = new int[v.length];//path reversed
-    int delta = Integer.MAX_VALUE; //augmenting value on this path
-    
-    //now walk back along this path to update flow
-    int i = 0;//index of path[]
-    current = sink;
-    int pEdge, diff;
-    while (current != source){
-      revPath[i] = current;
-      pEdge = v[current].pEdge;
-      
-      if (e[pEdge].direct == 1){//forward
-        //error check
-        if (e[pEdge].end != current){
-          System.out.println ("Edge trace error, exit1...");
-          System.exit(1);
-        }
-        
-        //calculate possible augmenting value on this edge
-        diff = e[pEdge].capacity - e[pEdge].flow;
-        if (diff > 0 && diff < delta)
-          delta = diff;
-        
-        //go to next stop  
-        current = e[pEdge].start;
-      }
-      else if (e[pEdge].direct == -1){
-        //error check
-        if (e[pEdge].start != current){
-          System.out.println ("Edge trace error, exit2...");
-          System.exit(1);
-        }
-        
-        //possible augmenting value on this edge is its flow
-        //i.e. the maximum amount of flow we could push back
-      	if (e[pEdge].flow > 0 && e[pEdge].flow < delta)
-      	  delta = e[pEdge].flow;
-        
-        //go to next stop       	  
-      	current = e[pEdge].end;
-      }	
-      
-      i++;//advance the index
-    }
-    revPath[i] = source;//don't forget the last one --- the source
+		//Greedy, find the final group
+		//Map<String, ArrayList> finalGroup = new HashMap<String, ArrayList>();
+		//ArrayList<Map> finalGroupMemberList = new ArrayList<Map>();
+		//先把v加进他自己的finalGroupMemberList里面
+		//Map<String, Double> finalGroupMembertmp = new HashMap<String, Double>();
+		//String member1 = v;
+		//Double capability1 = capacityMap.get(member1);
+		//finalGroupMembertmp.put(member1, capability1);
+		//finalGroupMemberList.add(finalGroupMembertmp);
+		//System.out.println(finalGroupMemberList);
+		
+		//边集合。首先添加与v相关的边。
+		ArrayList<Map> EdgeInMid = new ArrayList<Map>();
+		ArrayList<String> itemsOfv = itemMap.get(v);
+		for (String item_r : itemsRequired){
+			for(String item_v: itemsOfv){
+				if (item_r.equals(item_v)){
+					Map<String,String> tmp = new HashMap<String, String>();
+					tmp.put(item_r, v);
+					EdgeInMid.add(tmp);
+				}
+			}
+		}
+		//System.out.println(EdgeInMid);
+		
+		//按顺序一个个的把user加进来
+		ArrayList<String> finalGroupMem = new ArrayList();
+		finalGroupMem.add(v);
+		String member = v;
+		int maxflow_old = 0;
+		for(int i=0; i<relationSorted.size();i++){
+									
+			//写个txt让Maxflow读一下	
+			
+	        FileWriter writer;
+	        try {
+	            writer = new FileWriter("files/maxflow.txt");
+	            int num_node = finalGroupMem.size()+itemsRequired.size()+2;
+				int num_edge = finalGroupMem.size()+itemsRequired.size()+EdgeInMid.size();
+				String str="";
+				str += num_node;
+				str += " ";
+				str += num_edge;
+				str +="\r\n";				
+	            writer.write(str);
+	      
+	            //Task 编号，从1到k,一共k个item
+	            Map<String, Integer> itemMapMaxflow = new HashMap<String, Integer>();
+	            int count = 1;
+	            for(String item_r: itemsRequired){
+	            	itemMapMaxflow.put(item_r, count);
+	            	count++;
+	            }
+	            
+	            //User 编号，从k+1到n-2
+	            Map<String, Integer> userMapMaxflow = new HashMap<String, Integer>();
+	            count = itemsRequired.size()+1;
+	            for(String user_r: finalGroupMem){
+	            	userMapMaxflow.put(user_r, count);
+	            	count++;
+	            }
+	            //System.out.println(userMapMaxflow);
+	            //source到Task的点们      
+	            String str1 = "";
+	            for(String item_r: itemsRequired){
+	            	str1 += "0 ";
+	            	str1 += itemMapMaxflow.get(item_r);
+	            	str1 += " 1";
+	            	str1 += "\r\n";
+	            }
+	            writer.write(str1);
+	            //Users到sink的点们 
+	            //System.out.println(finalGroupMem);
+	            String str2 = "";
+	            
+	            for(String user_r: finalGroupMem){
+	            	str2 += userMapMaxflow.get(user_r);
+	            	str2 += " ";
+	            	str2 += num_node-1;
+	            	str2 += " ";
+	            	double cap = Math.ceil(capacityMap.get(user_r));
+	            	str2 += (int)cap;
+	            	str2 += "\r\n";
+	            }
+	            writer.write(str2);
+	            //Task 到Users的点们
+	            String str3 ="";
+	            for (String item_r: itemsRequired){
+	            	for(String user_r: finalGroupMem){
+	            		ArrayList<String> user_items = itemMap.get(user_r);
+	            		for(String item_u: user_items){
+	            			if(item_r.equals(item_u)){
+	            				str3 += itemMapMaxflow.get(item_r);
+	            				str3 += " ";
+	            				str3 += userMapMaxflow.get(user_r);
+	            				str3 += " 1";
+	            				str3 += "\r\n";
+	            				//break;
+	            			}
+	            		}
+	            		//break;
+	            	}	            		
+	            }
+	            writer.write(str3);	            
+	            writer.flush();
+	            writer.close();
+	        } catch (IOException e) {
+	            e.printStackTrace();
+	        }//txt done.
+	        Maxflow mf = new Maxflow();
+	        mf.runMF();
+	        System.out.println("maxflow=" + mf.maxFlow);
+	        if(k==mf.maxFlow)
+	        	break;
+	        if(maxflow_old == mf.maxFlow)
+	        	finalGroupMem.remove(member);
+	        else
+	        	maxflow_old = mf.maxFlow;
+	        
+	        //不满足maxflow，加入新的user和它的capability
+	        Map<String, Double> finalGroupMember = new HashMap<String, Double>();
+			member = relationSorted.get(i).getKey();
+			Double capability = capacityMap.get(member);
+			finalGroupMember.put(member, capability);
+			//finalGroupMemberList.add(finalGroupMember);
+			finalGroupMem.add(member);
+			
+			//此时maxflow中，Users和Task之间的边的集合
+			ArrayList<String> itemsOfu = itemMap.get(member);
+			for (String item_r: itemsRequired){
+				for(String item_u: itemsOfu){
+					if (item_r.equals(item_u)){
+						Map<String,String> tmp = new HashMap<String, String>();
+						tmp.put(item_r, member);
+						EdgeInMid.add(tmp);
+					}
+				}
+			}
+			maxflow_old = mf.maxFlow;
+			System.out.println(maxflow_old);
+	        
+		}
+		System.out.println(finalGroupMem);
+		//finalGroup.put(v, finalGroupMemberList);
+		/*System.out.println(relationSorted);
+		System.out.println(relationSorted.get(1));
+		System.out.println(relationSorted.get(1).getValue());
+		/*System.out.println(finalGroupMemberList);
+		System.out.println(finalGroupMemberList.get(1));*/
 
-    //now walk backward again to update flow on the way
-    int[] path = new int[i+1];//we have i+1 nodes on this path
-    int k;
-    for (int j = 0; j < i; j++){
-      k = v[revPath[j]].pEdge; 
-      path[i-j] = revPath[j];//save in forward order
-      
-      if (e[k].direct == 1){//forwards
-        e[k].flow += delta;
-        e[k].direct = 0;//set back to default
-      }
-      else if (e[k].direct == -1){//backwards
-        e[k].flow -= delta;
-        e[k].direct = 0;//set back to default
-      }
-    }
-    
-    //output the augmenting path found
-    System.out.println("\nAugmenting path with delta = " + delta);
-    int m = 0;
-    for (; m < path.length - 1; m++)
-      System.out.print(path[m] + " --> ");
-    System.out.println(path[m]);
-    
-    //update maxFlow
-    maxFlow += delta;
-
-    return path;
-  }
-  
-  
-  //look for the cut vertices R or R-bar whichever smaller
-  //start to walk from source and save nodes visited until 
-  //we can't go further (when all forward edges are saturated
-  //and all backward edges have a flow of 0.
-  private int[] cutVertices(){
-    int k = 0, current;
-    int[] temp = new int[v.length];
-    
-    //used to mark a node as visited if set as 1
-    int[] visited = new int[v.length];
-    
-    Queue<Integer> que = new LinkedList<Integer>();
-    que.add (source);
-    visited[source] = 1;
-    
-    while (!que.isEmpty()){
-      current = que.remove();
-      temp[k] = current;
-      k++;
-      
-      //get current's edges
-      Vector<Integer> fors = v[current].fors;
-      Vector<Integer> backs = v[current].backs;
-
-      //select a forward edge if it is not saturated
-      for (int i = 0; i < fors.size(); i++){
-        Integer edge_obj = (Integer)fors.elementAt(i);
-        int edge = edge_obj.intValue();
-        
-        //skip those saturated
-        if (e[edge].capacity == e[edge].flow)
-          continue;
-          
-        //at this point, edge.capacity > edge.flow
-	    if (visited[e[edge].end] == 0){//not yet visited
-	      que.add(e[edge].end);
-	      visited[e[edge].end] = 1;
-	    }
-      }
-    
-      //select a backward edge if its flow > 0
-      for (int i = 0; i < backs.size(); i++){
-        Integer edge_obj = (Integer)backs.elementAt(i);
-        int edge = edge_obj.intValue();
-        
-        //skip this edge if its flow is 0
-        if (e[edge].flow == 0)
-          continue;
-          
-        //at this point, its flow must be >0        
-	    if (visited[e[edge].start] == 0){//not yet visited
-	      que.add(e[edge].start);
-	      visited[e[edge].start] = 1;
-	    }
-      }
-    }
-    
-    //find out which is smaller, R or R-bar
-    if(k <= v.length / 2){//R is smaller
-      int[] R = new int[k];
-      for (int i = 0; i < k; i++)
-        R[i] = temp[i];
-      return R;
-    }
-    else {//R_bar is smaller
-      int[] R_bar = new int[v.length - k];
-      int m = 0;
-      for (int i = 0; i < n; i++){
-        boolean flag = false;
-        for (int j = 0; j < temp.length; j++)
-          if (i == temp[j])
-            flag = true;
-            
-        if (flag == false){
-          R_bar[m] = i;
-          m++;
-        }
-      }
-      
-      return R_bar;
-    }
-    
-  }
-  
-  //public access to start the algorithm
-  public void runMF (){
-    try {
-      inputCapacity();
-    }
-    catch (IOException e){
-      System.out.println ("Read file error, exit....");
-      System.exit(1);
-    }
-    
-    //looking for augmenting paths and compute max flow
-    while (findAugPath() != null)
-      ;	//do nothing
-    
-    
-    //get all cut vertices and output
-    int[] vertices = cutVertices();
-    //System.out.print("\nVertices in cut set A:  ");
-    //for (int i = 0; i < vertices.length; i++)
-    //  System.out.print (vertices[i]+", ");
-   // System.out.println ();    
-  }
-  
-  
-  public static void main (String arg[]){
-  	Maxflow mf = new Maxflow();
-  	mf.runMF();
-  	System.out.println ("Maximum flow = " + mf.maxFlow);
-  }
+	}
+	
+	
 }
+
+
+
+
+/*
+ArrayList<String> userList = new ArrayList<String>(); 
+ArrayList<String> userCapability = new ArrayList<String>(); 
+int hop = 1;
+
+try {
+	FileReader read = new FileReader("files/userRepos.txt");
+	BufferedReader br = new BufferedReader(read);
+	String row;
+	while((row = br.readLine())!=null){
+	    //System.out.println(row);
+		String[] tmpuser = row.split(" ");
+		userList.add(tmpuser[0]);
+		double tmpcap = Double.valueOf(tmpuser[1]).doubleValue();;
+		String cap = String.valueOf(Math.log(1+tmpcap));
+		userCapability.add(cap);
+		br.skip(1);
+	}
+} catch (FileNotFoundException e) {
+	   e.printStackTrace();
+} catch (IOException e){
+	   e.printStackTrace();
+}
+System.out.println(userList);
+System.out.println(userCapability);*/
